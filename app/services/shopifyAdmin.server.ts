@@ -41,3 +41,42 @@ export async function fetchProductMetrics(session: Session) {
 
   return response.body?.data?.products?.nodes ?? [];
 }
+
+export async function fetchProductVariants(
+  session: Session,
+  productLimit = 20,
+  variantLimit = 50
+) {
+  const client = new shopify.api.clients.Graphql({ session });
+  const response = await client.query({
+    data: `#graphql
+      query PreOrderProducts($productLimit: Int!, $variantLimit: Int!) {
+        products(first: $productLimit, sortKey: UPDATED_AT) {
+          nodes {
+            id
+            title
+            handle
+            featuredImage {
+              url
+            }
+            variants(first: $variantLimit) {
+              nodes {
+                id
+                title
+                sku
+                availableForSale
+                inventoryQuantity
+              }
+            }
+          }
+        }
+      }
+    `,
+    variables: {
+      productLimit,
+      variantLimit
+    }
+  });
+
+  return response.body?.data?.products?.nodes ?? [];
+}

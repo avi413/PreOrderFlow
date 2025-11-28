@@ -43,3 +43,18 @@ model ScriptInjectionRequest {
   shop ShopInstallation @relation(fields: [shopId], references: [id])
   shopId Int
 }
+
+model PreOrderSetting {
+  id            String   @id @default(cuid())
+  shopDomain    String
+  productId     String
+  variantId     String
+  enabled       Boolean  @default(false)
+  expectedDate  DateTime?
+  limitQuantity Int?
+  customText    String?
+  createdAt     DateTime @default(now())
+
+  @@index([shopDomain])
+  @@unique([shopDomain, variantId])
+}
