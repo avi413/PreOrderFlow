@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ShopifySession {
+  id          String   @id
+  shop        String   @index
+  state       String?
+  isOnline    Boolean
+  scope       String?
+  expires     DateTime?
+  accessToken String?
+  userId      BigInt?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ShopInstallation {
+  id             Int      @id @default(autoincrement())
+  shopDomain     String   @unique
+  accessToken    String?
+  installedAt    DateTime @default(now())
+  lastSeenAt     DateTime @updatedAt
+  plan           String?  // Placeholder until billing plans are defined
+  isActive       Boolean  @default(true)
+
+  scripts        ScriptInjectionRequest[]
+}
+
+model ScriptInjectionRequest {
+  id             Int      @id @default(autoincrement())
+  shopDomain     String
+  status         String   @default("pending")
+  requestedAt    DateTime @default(now())
+  processedAt    DateTime?
+  scriptHandle   String?
+
+  shop ShopInstallation @relation(fields: [shopId], references: [id])
+  shopId Int
+}
