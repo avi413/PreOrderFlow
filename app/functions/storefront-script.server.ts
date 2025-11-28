@@ -1,29 +1,65 @@
 import type { AdminApiContext } from "@shopify/shopify-app-remix/server";
 
-/**
- * Placeholder for script-tag / storefront function registration.
- * Extend this once the storefront waitlist logic is implemented.
- */
-export async function ensureStorefrontScript(shopDomain: string, admin: AdminApiContext) {
-  console.info(`Ensuring storefront script for ${shopDomain}`);
+const STOREFRONT_SCRIPT_PATH = "/storefront-script.js";
 
-  // When ready, call the Admin GraphQL API to upsert the script tag / function.
+export async function ensureStorefrontScript(shopDomain: string, admin: AdminApiContext) {
   if (!admin) return;
 
-  // Example scaffold for future implementation:
-  // await admin.graphql(`#graphql
-  //   mutation CreateScriptTag($input: ScriptTagInput!) {
-  //     scriptTagUpsert(scriptTag: $input) {
-  //       scriptTag { id displayScope }
-  //       userErrors { field message }
-  //     }
-  //   }
-  // `, {
-  //   variables: {
-  //     input: {
-  //       src: `${process.env.SHOPIFY_APP_URL}/scripts/waitlist.js`,
-  //       displayScope: "ONLINE_STORE"
-  //     }
-  //   }
-  // });
+  const appUrl = process.env.SHOPIFY_APP_URL?.replace(/\/$/, "");
+
+  if (!appUrl) {
+    console.warn(
+      "[preorder] SHOPIFY_APP_URL is not configured. Storefront script cannot be registered."
+    );
+    return;
+  }
+
+  const scriptUrl = `${appUrl}${STOREFRONT_SCRIPT_PATH}`;
+
+  try {
+    const response = await admin.graphql(
+      `#graphql
+        mutation UpsertPreOrderScript($input: ScriptTagInput!) {
+          scriptTagUpsert(scriptTag: $input) {
+            scriptTag {
+              id
+              src
+              displayScope
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `,
+      {
+        variables: {
+          input: {
+            src: scriptUrl,
+            displayScope: "ONLINE_STORE"
+          }
+        }
+      }
+    );
+
+    const userErrors = response?.body?.data?.scriptTagUpsert?.userErrors ?? [];
+
+    if (userErrors.length) {
+      console.warn("[preorder] Unable to register storefront script", {
+        shopDomain,
+        userErrors
+      });
+    } else {
+      console.info("[preorder] Storefront script ensured", {
+        shopDomain,
+        scriptUrl
+      });
+    }
+  } catch (error) {
+    console.error("[preorder] Failed to ensure storefront script", {
+      shopDomain,
+      error
+    });
+  }
 }
